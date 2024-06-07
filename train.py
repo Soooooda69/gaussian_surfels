@@ -186,7 +186,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
 
 
-            if (iteration - 1) % 100 == 0 or write_progress:
+            if (iteration - 1) % 100 == 0:
 
                 if mono is not None:
                     monoN_wrt = normal2rgb(monoN, mask_gt)
