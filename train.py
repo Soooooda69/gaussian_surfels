@@ -20,7 +20,7 @@ from scene import Scene, GaussianModel
 from utils.general_utils import safe_state
 import uuid
 from tqdm import tqdm
-from utils.image_utils import psnr, depth2rgb, normal2rgb, depth2normal, match_depth, normal2curv, resize_image
+from utils.image_utils import psnr, depth2rgb, normal2rgb, depth2normal, match_depth, normal2curv, resize_image, cross_sample
 from torchvision.utils import save_image
 from argparse import ArgumentParser, Namespace
 import time
@@ -37,7 +37,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset)
     scene = Scene(dataset, gaussians, opt.camera_lr, shuffle=False, resolution_scales=[1, 2, 4])
-    use_mask = dataset.with_mask
+    use_mask = dataset.use_mask
     gaussians.training_setup(opt)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
@@ -60,7 +60,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
     first_iter += 1
     count = -1
-    write_progress = False
     for iteration in range(first_iter, opt.iterations + 2):
 
         iter_start.record()
@@ -77,6 +76,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             scale = 2
         elif iteration - 1 >= 5000:
             scale = 1
+        # scale = 1
 
         # Pick a random Camera
         if not viewpoint_stack:
@@ -153,7 +153,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
 
 
-
         with torch.no_grad():
             # Progress bar
             ema_loss_for_log = 0.4 * loss_rgb.item() + 0.6 * ema_loss_for_log
@@ -182,7 +181,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     gaussians.adaptive_prune(min_opac, scene.cameras_extent)
                     gaussians.adaptive_densify(opt.densify_grad_threshold, scene.cameras_extent)
                 
-                if (iteration - 1) % opt.opacity_reset_interval == 0 and opt.opacity_lr > 0 and not write_progress:
+                if (iteration - 1) % opt.opacity_reset_interval == 0 and opt.opacity_lr > 0:
                     gaussians.reset_opacity(0.12, iteration)
 
 
@@ -197,14 +196,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 depth_wrt = depth2rgb(depth, mask_vis)
                 img_wrt = torch.cat([gt_image, image, monoN_wrt, normal_wrt, monoD_wrt, depth_wrt], 2)
                 save_image(img_wrt.cpu(), f'test/test.png')
-                
-                if write_progress:
-                    progress_img = torch.cat([torch.cat([image, opac], 0),
-                                            torch.cat([normal_wrt, opac], 0),
-                                            torch.cat([depth_wrt, opac], 0)], 2)
-                    progress_path = f'{dataset.model_path}/progress'
-                    os.makedirs(progress_path, exist_ok=True)
-                    save_image(progress_img.cpu(), f'{progress_path}/{count}.png')
 
             
             if iteration < opt.iterations:
@@ -227,7 +218,7 @@ def prepare_output_and_logger(args):
         else:
             unique_str = str(uuid.uuid4())
 
-        args.model_path = os.path.join("./output", f"{args.source_path.split('/')[-1]}_{unique_str[0:10]}")
+        args.model_path = os.path.join("./output/test516", f"{args.source_path.split('/')[-1]}_{unique_str[0:10]}")
         
         
     # Set up output folder

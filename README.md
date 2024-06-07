@@ -1,10 +1,10 @@
 # High-quality Surface Reconstruction using Gaussian Surfels
-[Pinxuan Dai](https://turandai.github.io/)\*, 
+<!-- [Pinxuan Dai](https://turandai.github.io/)\*, 
 [Jiamin Xu](https://superxjm.github.io/)\*, 
 Wenxiang Xie, 
 [Xinguo Liu](http://www.cad.zju.edu.cn/home/xgliu),
 [Huamin Wang](https://wanghmin.github.io/index.html),
-[Weiwei Xu](http://www.cad.zju.edu.cn/home/weiweixu/index.htm)<sup>†</sup>
+[Weiwei Xu](http://www.cad.zju.edu.cn/home/weiweixu/index.htm)<sup>†</sup> -->
 
 | [Project](https://turandai.github.io/projects/gaussian_surfels/) 
 | [Paper](https://arxiv.org/pdf/2404.17774) 
@@ -45,7 +45,7 @@ You can download the data from [here](https://unimelbcloud-my.sharepoint.com/:f:
 To test on your own unposed data, we recommend to use [COLMAP](https://github.com/colmap/colmap) for SfM initialization. To estimate monocular normal for your own data, please follow [Omnidata](https://github.com/EPFL-VILAB/omnidata) for additional environment setup. Download the pretrained model and run the normal estimation by:
 ```shell
 cd submodules/omnidata
-sh download_surface_normal_models
+sh tools/download_surface_normal_models.sh
 python estimate_normal.py --img_path path/to/your/image/directory
 ```
 
@@ -73,7 +73,12 @@ We prune the Poisson mesh with a certain threshold to remove outlying faces and 
 To evaluate the geometry accuracy on DTU, you have to download the [DTU](https://roboimagedata.compute.dtu.dk/?page_id=36) ground truth point cloud. 
 For BlendedMVS evaluation, we fused, denoised and normalized the ground truth multi-view depth maps to a global point cloud as the ground truth geometry, which is included in our provided dataset for download. 
 We follow previous work to use [this](https://github.com/jzhangbs/DTUeval-python) code to calculate the Chamfer distance between the ground truth point cloud and the reconstructed mesh.
-
+```shell
+# DTU evaluation:
+python eval.py --dataset dtu --source_path path/to/your/data/directory --mesh_path path/to/your/mesh --dtu_gt_path path/to/DTU/MVSData --dtu_scanId ID
+# BlendedMVS evaluation:
+python eval.py --dataset bmvs --source_path path/to/your/data/directory --mesh_path path/to/your/mesh
+```
 
 <section class="section" id="BibTeX">
   <div class="container is-max-desktop content">
