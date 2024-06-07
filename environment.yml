@@ -12,7 +12,7 @@ dependencies:
   - torchaudio=0.12.1
   - torchvision=0.13.1
   - tqdm
-  - pip:
+  - /home/cyberpunk/anaconda3/envs/gaussian_surfels/bin/pip:
     - pymeshlab
     - opencv-python
     - matplotlib

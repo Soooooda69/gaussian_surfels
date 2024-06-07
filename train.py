@@ -12,7 +12,7 @@
 import os
 import torch
 from random import randint
-from utils.loss_utils import l1_loss, ssim, cos_loss, bce_loss, knn_smooth_loss
+from utils.loss_utils import l1_loss, ssim, cos_loss, bce_loss, knn_smooth_loss, monodisp
 from gaussian_renderer import render, network_gui
 import numpy as np
 import sys
@@ -81,7 +81,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         # Pick a random Camera
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras(scale).copy()[:]
-        viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack) - 1))
+        # viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack) - 1))
+        viewpoint_cam = viewpoint_stack.pop(0)
         # viewpoint_cam = scene.getTrainCameras(scale)[0]
 
         # Render
@@ -106,7 +107,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         if mono is not None:
             mono *= mask_gt
             monoN = mono[:3]
-            # monoD = mono[3:]
+            monoD = mono[3:]
             # monoD_match, mask_match = match_depth(monoD, depth, mask_gt * mask_vis, 256, [viewpoint_cam.image_height, viewpoint_cam.image_width])
 
         # Loss
@@ -117,7 +118,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         
         if mono is not None:
             loss_monoN = cos_loss(normal, monoN, weight=mask_gt)
-            # loss_depth = l1_loss(depth * mask_match, monoD_match)
+            # disp_mono = 1 / depth.clamp(1e-6)
+            # disp_render = 1 /monoD.clamp(1e-6)
+            loss_depth = monodisp(depth, monoD, 'l1')[-1]
+            # loss_depth = l1_loss(depth, monoD)
 
         loss_surface = cos_loss(resize_image(normal, 1), resize_image(d2n, 1), thrsh=np.pi*1/10000 , weight=1)
         
@@ -140,7 +144,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         # mono = None
         if mono is not None:
             loss += (0.04 - ((iteration / opt.iterations)) * 0.03) * loss_monoN
-            # loss += 0.01 * loss_depth
+        loss += (0.04 - ((iteration / opt.iterations)) * 0.03) * loss_depth
 
         loss.backward()
 
@@ -183,15 +187,15 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
 
 
-            if (iteration - 1) % 1000 == 0 or write_progress:
+            if (iteration - 1) % 100 == 0 or write_progress:
 
                 if mono is not None:
                     monoN_wrt = normal2rgb(monoN, mask_gt)
-                    # monoD_wrt = depth2rgb(monoD_match, mask_match)
+                    monoD_wrt = depth2rgb(monoD, mask_gt)
 
                 normal_wrt = normal2rgb(normal, mask_vis)
                 depth_wrt = depth2rgb(depth, mask_vis)
-                img_wrt = torch.cat([gt_image, image, normal_wrt, depth_wrt], 2)
+                img_wrt = torch.cat([gt_image, image, monoN_wrt, normal_wrt, monoD_wrt, depth_wrt], 2)
                 save_image(img_wrt.cpu(), f'test/test.png')
                 
                 if write_progress:
@@ -288,7 +292,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug_from', type=int, default=-1)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
     parser.add_argument("--test_iterations", nargs="+", type=int, default=[5_000, 10_000, 15_000, 20_000, 25_000, 30_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[5_000, 15_000, 30_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[7_000, 10_000, 15_000, 30_000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)

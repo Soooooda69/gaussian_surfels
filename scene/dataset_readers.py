@@ -128,9 +128,9 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
 
 
         try:
-            monoN = read_monoData(f'{images_folder}/../normal/{image_name}_normal.npy')
+            monoN = read_monoData(f'{images_folder}/../../normal/{image_name}.npy')
             try:
-                monoD = read_monoData(f'{images_folder}/../depth/{image_name}_depth.npy')
+                monoD = read_monoData(f'{images_folder}/../../depth/{image_name}.npy')
             except FileNotFoundError:
                 monoD = np.zeros_like(monoN[:1])
             mono = np.concatenate([monoN, monoD], 0)
@@ -138,7 +138,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
             mono = None
 
         try:
-            mask = load_mask(f'{images_folder}/../mask/{image_name[-3:]}.png')[None]
+            mask = load_mask(f'{images_folder}/../../mask/{image_name[-3:]}.png')[None]
         except FileNotFoundError:
             mask = np.ones([1, image.size[1], image.size[0]]).astype(np.float32)
 
